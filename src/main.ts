@@ -2,8 +2,25 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AppDataSource } from './infrastructure/database/data-source';
 
 async function bootstrap() {
+  // Run migrations if in production
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      console.log('Running database migrations...');
+      if (!AppDataSource.isInitialized) {
+        await AppDataSource.initialize();
+      }
+      await AppDataSource.runMigrations();
+      console.log('Migrations completed successfully');
+    } catch (error) {
+      console.error('Migration error:', error);
+      // Don't exit, let the app continue
+      // Migrations might have already been run
+    }
+  }
+
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
